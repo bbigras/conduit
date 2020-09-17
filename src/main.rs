@@ -119,6 +119,8 @@ fn setup_rocket() -> rocket::Rocket {
                 client_server::get_pushers_route,
                 client_server::set_pushers_route,
                 client_server::upgrade_room_route,
+                client_server::get_sso_redirect,
+                client_server::get_sso_return,
                 server_server::well_known_server,
                 server_server::get_server_version,
                 server_server::get_server_keys,
@@ -128,7 +130,10 @@ fn setup_rocket() -> rocket::Rocket {
             ],
         )
         .attach(AdHoc::on_attach("Config", |mut rocket| async {
-            let data = Database::load_or_create(rocket.config().await).expect("valid config");
+            let data = Database::load_or_create(rocket.config().await)
+                .await
+                .expect("valid config");
+            macaroon::initialize().unwrap();
 
             Ok(rocket.manage(data))
         }))

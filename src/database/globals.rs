@@ -12,10 +12,13 @@ pub struct Globals {
     max_request_size: u32,
     registration_disabled: bool,
     encryption_disabled: bool,
+
+    pub macaroon_key: macaroon::crypto::MacaroonKey,
+    pub openid_client: Option<openid::DiscoveredClient>,
 }
 
 impl Globals {
-    pub fn load(globals: sled::Tree, config: &rocket::Config) -> Result<Self> {
+    pub async fn load(globals: sled::Tree, config: &rocket::Config) -> Result<Self> {
         let keypair = ruma::signatures::Ed25519KeyPair::new(
             &*globals
                 .update_and_fetch("keypair", utils::generate_keypair)?
@@ -23,6 +26,36 @@ impl Globals {
             "key1".to_owned(),
         )
         .map_err(|_| Error::bad_database("Private or public keys are invalid."))?;
+
+        let openid_client = if config.get_bool("openid_enabled").unwrap_or(false) {
+            let client_id = config
+                .get_str("openid_id")
+                .expect("openid_id missing")
+                .to_string();
+            let client_secret = config
+                .get_str("openid_secret")
+                .expect("openid_secret missing")
+                .to_string();
+            let redirect = config
+                .get_str("openid_redirect")
+                .ok()
+                .map(|v| v.to_string());
+            let issuer = reqwest::Url::parse(
+                config
+                    .get_str("openid_discover")
+                    .expect("openid_discover missing"),
+            )
+            .unwrap();
+
+            let client =
+                openid::DiscoveredClient::discover(client_id, client_secret, redirect, issuer)
+                    .await
+                    .unwrap();
+
+            Some(client)
+        } else {
+            None
+        };
 
         Ok(Self {
             globals,
@@ -41,6 +74,11 @@ impl Globals {
                 .map_err(|_| Error::BadConfig("Invalid max_request_size."))?,
             registration_disabled: config.get_bool("registration_disabled").unwrap_or(false),
             encryption_disabled: config.get_bool("encryption_disabled").unwrap_or(false),
+            openid_client,
+            macaroon_key: config
+                .get_str("macaroon_key")
+                .expect("no macaroon key")
+                .into(),
         })
     }
 

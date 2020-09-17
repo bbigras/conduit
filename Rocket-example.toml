@@ -22,6 +22,14 @@ port = 14004
 # You should probably leave this at 0.0.0.0
 address = "0.0.0.0"
 
+# openid connect sso stuff
+# macaroon_key = "this is the key"
+# openid_enabled = true
+# openid_discover = "https://keycloak.something/auth/realms/somerealm"
+# openid_id = "client_id"
+# openid_secret = "client_secret"
+# openid_redirect = "http://localhost:8787/sso_return"
+
 # TLS support
 # Note: Not necessary when using a reverse proxy:
 #[global.tls]

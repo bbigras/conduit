@@ -44,7 +44,7 @@ impl Database {
     }
 
     /// Load an existing database or create a new one.
-    pub fn load_or_create(config: &Config) -> Result<Self> {
+    pub async fn load_or_create(config: &Config) -> Result<Self> {
         let server_name = config.get_str("server_name").unwrap_or("localhost");
 
         let path = config
@@ -68,7 +68,7 @@ impl Database {
         info!("Opened sled database at {}", path);
 
         Ok(Self {
-            globals: globals::Globals::load(db.open_tree("global")?, config)?,
+            globals: globals::Globals::load(db.open_tree("global")?, config).await?,
             users: users::Users {
                 userid_password: db.open_tree("userid_password")?,
                 userid_displayname: db.open_tree("userid_displayname")?,
